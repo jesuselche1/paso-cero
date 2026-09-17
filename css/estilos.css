@@ -1,0 +1,373 @@
+/* ==========================================================
+   Paso Cero — hoja de estilos compartida
+   Pensada primero para móvil: los estilos base son para
+   pantallas pequeñas y al final se amplían para pantallas grandes.
+   ========================================================== */
+
+/* 1. Colores y medidas en un solo sitio (variables CSS) */
+:root {
+  --crema: #fbf7ee;          /* fondo de la página */
+  --crema-oscuro: #f2ecdd;   /* tarjetas y zonas secundarias */
+  --tinta: #2b2a26;          /* texto principal */
+  --tinta-suave: #6b675c;    /* texto secundario */
+  --borde: #e2dac6;
+
+  --verde: #2e7d4f;          /* botones */
+  --verde-oscuro: #22613c;   /* botón al pasar el ratón */
+  --verde-claro: #e3f1e8;    /* mensajes de acierto */
+
+  --naranja-fondo: #fff1e0;  /* recuadro de error */
+  --naranja-borde: #f0a45b;
+  --naranja-texto: #7a4210;
+
+  --radio: 12px;
+  --ancho-max: 720px;
+  --letra: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --letra-codigo: ui-monospace, "Cascadia Code", Consolas, monospace;
+}
+
+/* 2. Base */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--crema);
+  color: var(--tinta);
+  font-family: var(--letra);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+}
+
+img {
+  max-width: 100%;
+}
+
+a {
+  color: var(--verde);
+}
+
+code {
+  font-family: var(--letra-codigo);
+  background: var(--crema-oscuro);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  font-size: 0.92em;
+}
+
+.contenedor {
+  max-width: var(--ancho-max);
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+/* 3. Cabecera y pie */
+.cabecera {
+  border-bottom: 1px solid var(--borde);
+  padding: 14px 0;
+}
+
+.cabecera .contenedor {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.logo {
+  font-weight: 800;
+  font-size: 1.25rem;
+  color: var(--tinta);
+  text-decoration: none;
+}
+
+.logo span {
+  color: var(--verde);
+}
+
+.enlace-volver {
+  font-size: 0.95rem;
+}
+
+.pie {
+  border-top: 1px solid var(--borde);
+  margin-top: 48px;
+  padding: 20px 0 32px;
+  color: var(--tinta-suave);
+  font-size: 0.9rem;
+}
+
+/* 4. Botones */
+.boton {
+  display: inline-block;
+  background: var(--verde);
+  color: #fff;
+  border: none;
+  border-radius: var(--radio);
+  padding: 14px 22px;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  /* En móvil el botón ocupa todo el ancho: más fácil de pulsar */
+  width: 100%;
+  text-align: center;
+  transition: background 0.15s;
+}
+
+.boton:hover {
+  background: var(--verde-oscuro);
+}
+
+.boton:focus-visible {
+  outline: 3px solid var(--tinta);
+  outline-offset: 2px;
+}
+
+.boton:disabled {
+  background: #9bb8a6;
+  cursor: wait;
+}
+
+.boton-secundario {
+  background: transparent;
+  color: var(--verde);
+  border: 2px solid var(--verde);
+}
+
+.boton-secundario:hover {
+  background: var(--verde-claro);
+}
+
+/* 5. Página de inicio */
+.portada {
+  padding: 40px 0 24px;
+}
+
+.portada h1 {
+  font-size: 2rem;
+  line-height: 1.2;
+  margin: 0 0 12px;
+}
+
+.portada p {
+  color: var(--tinta-suave);
+  margin: 0 0 24px;
+}
+
+.lista-lecciones {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.tarjeta {
+  background: #fff;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 16px;
+}
+
+.tarjeta h3 {
+  margin: 0 0 4px;
+  font-size: 1.1rem;
+}
+
+.tarjeta p {
+  margin: 0;
+  color: var(--tinta-suave);
+  font-size: 0.95rem;
+}
+
+.tarjeta a {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.tarjeta-bloqueada {
+  opacity: 0.55;
+}
+
+.etiqueta {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--verde);
+  margin-bottom: 4px;
+}
+
+/* Hueco reservado para un anuncio (vacío de momento) */
+.hueco-anuncio {
+  margin: 32px 0;
+  min-height: 120px;
+  border: 2px dashed var(--borde);
+  border-radius: var(--radio);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tinta-suave);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* 6. Página de lección */
+.leccion h1 {
+  font-size: 1.75rem;
+  line-height: 1.25;
+  margin: 28px 0 8px;
+}
+
+.reto {
+  background: var(--crema-oscuro);
+  border-radius: var(--radio);
+  padding: 14px 16px;
+  margin: 20px 0;
+}
+
+.reto strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* El editor de CodeMirror */
+.editor {
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  overflow: hidden;
+  background: #fff;
+  margin-bottom: 12px;
+}
+
+.editor .CodeMirror {
+  height: auto;
+  min-height: 160px;
+  font-family: var(--letra-codigo);
+  font-size: 1rem;
+  background: #fff;
+}
+
+.editor .CodeMirror-scroll {
+  min-height: 160px;
+}
+
+.editor .CodeMirror-gutters {
+  background: var(--crema-oscuro);
+  border-right: 1px solid var(--borde);
+}
+
+.acciones {
+  display: grid;
+  gap: 10px;
+}
+
+.estado {
+  font-size: 0.9rem;
+  color: var(--tinta-suave);
+  margin: 10px 0 0;
+  min-height: 1.4em;
+}
+
+/* Resultado del código */
+.resultado {
+  margin-top: 16px;
+}
+
+.resultado h2 {
+  font-size: 1rem;
+  margin: 0 0 6px;
+}
+
+.salida {
+  background: var(--tinta);
+  color: #f5f1e6;
+  font-family: var(--letra-codigo);
+  font-size: 0.95rem;
+  padding: 14px 16px;
+  border-radius: var(--radio);
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  min-height: 3em;
+}
+
+.salida-vacia {
+  color: #a6a194;
+  font-style: italic;
+}
+
+/* Recuadro de error: naranja suave */
+.error {
+  background: var(--naranja-fondo);
+  border: 1px solid var(--naranja-borde);
+  border-left-width: 6px;
+  color: var(--naranja-texto);
+  border-radius: var(--radio);
+  padding: 14px 16px;
+  margin-top: 16px;
+}
+
+.error h2 {
+  font-size: 1rem;
+  margin: 0 0 6px;
+}
+
+.error p {
+  margin: 0 0 6px;
+}
+
+.error details {
+  margin-top: 8px;
+  font-size: 0.85rem;
+}
+
+.error pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--letra-codigo);
+  margin: 6px 0 0;
+}
+
+/* Mensaje de acierto */
+.acierto {
+  background: var(--verde-claro);
+  border: 1px solid var(--verde);
+  border-radius: var(--radio);
+  padding: 12px 16px;
+  margin-top: 16px;
+  font-weight: 600;
+  color: var(--verde-oscuro);
+}
+
+/* Clase para ocultar cosas */
+[hidden] {
+  display: none !important;
+}
+
+/* 7. Pantallas más grandes (tablet y ordenador) */
+@media (min-width: 640px) {
+  .portada h1 {
+    font-size: 2.6rem;
+  }
+
+  .boton {
+    width: auto;
+  }
+
+  .acciones {
+    display: flex;
+    gap: 10px;
+  }
+
+  .lista-lecciones {
+    grid-template-columns: 1fr 1fr;
+  }
+}
