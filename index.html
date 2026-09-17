@@ -20,7 +20,7 @@
     <section class="portada">
       <h1>Aprende Python desde cero</h1>
       <p>Lecciones cortas, en castellano sencillo. Escribes código y lo pruebas aquí mismo, sin instalar nada.</p>
-      <a class="boton" href="leccion-1.html">Empezar la primera lección</a>
+      <a class="boton" id="boton-empezar" href="leccion-1.html">Empezar el primer proyecto</a>
     </section>
 
     <!-- Hueco reservado para un anuncio. Vacío de momento. -->
@@ -29,21 +29,16 @@
     </aside>
 
     <section>
-      <h2>Lecciones</h2>
-      <ul class="lista-lecciones">
-        <li class="tarjeta">
-          <a href="leccion-1.html">
-            <span class="etiqueta">Lección 1</span>
-            <h3>Tu primer programa</h3>
-            <p>Usa <code>print()</code> para mostrar mensajes.</p>
-          </a>
-        </li>
-        <li class="tarjeta tarjeta-bloqueada">
-          <span class="etiqueta">Lección 2 · Próximamente</span>
-          <h3>Variables</h3>
-          <p>Guarda datos para usarlos después.</p>
-        </li>
-      </ul>
+      <h2>Tu mapa</h2>
+      <p class="subtitulo">9 proyectos. Cada uno que terminas desbloquea el siguiente.</p>
+      <!-- El mapa lo dibuja js/mapa.js -->
+      <ol class="mapa" id="mapa"></ol>
+      <noscript>
+        <p>Activa JavaScript para ver el mapa. Mientras tanto:
+          <a href="leccion-1.html">Proyecto 1</a> ·
+          <a href="leccion-2.html">Proyecto 2</a>
+        </p>
+      </noscript>
     </section>
 
   </main>
@@ -54,5 +49,7 @@
     </div>
   </footer>
 
+  <script src="js/progreso.js"></script>
+  <script src="js/mapa.js"></script>
 </body>
 </html>
