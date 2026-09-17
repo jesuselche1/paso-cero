@@ -4,7 +4,7 @@
 // código inicial, pista, cómo se comprueba, lo aprendido...
 //
 // 1. Crea el editor (CodeMirror)
-// 2. Carga Python en el navegador (Pyodide)
+// 2. Carga Python (Pyodide) en segundo plano, en un Web Worker
 // 3. Al pulsar «Comprobar», ejecuta el código y muestra el resultado
 //    (input() pide los datos en una caja dentro de la página)
 // 4. Si hay un error, lo explica en castellano sencillo
@@ -26,6 +26,7 @@ const cajaError = porId("error");
 const errorMensaje = porId("error-mensaje");
 const errorLinea = porId("error-linea");
 const errorTecnico = porId("error-tecnico");
+const detallesError = cajaError.querySelector("details");
 const nota = porId("nota");
 const acierto = porId("acierto");
 
@@ -61,95 +62,87 @@ if (botonPista && LECCION.pista) {
   });
 }
 
-// --- 2. Cargar Python ---
+// --- 2. Python en segundo plano ---
+// Python funciona dentro de un «trabajador» (js/python-worker.js), así
+// que aunque el programa se quede atascado, la página sigue respondiendo.
 
-// Este código Python se carga una vez. Antes de ejecutar el programa
-// de la persona, cambia cada input() por una versión que espera a que
-// escriba en la caja de la página, en vez de abrir una ventana emergente.
-const AYUDANTE_PYTHON = `
-import ast
-import sys
+// Si un programa pasa este tiempo sin terminar (sin contar lo que espera
+// a que la persona escriba), lo paramos: seguramente es un bucle infinito.
+const LIMITE_SEGUNDOS = 5;
 
+let trabajador = null;
+let pythonListo = false;
 
-class _EsperarEntrada(ast.NodeTransformer):
-    # Dentro de funciones no se puede esperar, así que no entramos
-    def visit_FunctionDef(self, nodo):
-        return nodo
+function arrancarPython() {
+  pythonListo = false;
+  botonComprobar.disabled = true;
+  const nuevo = new Worker("js/python-worker.js");
+  // Solo atendemos al trabajador actual, no a uno que ya hemos parado
+  nuevo.addEventListener("message", ({ data }) => {
+    if (nuevo === trabajador) recibirMensaje(data);
+  });
+  nuevo.addEventListener("error", (evento) => {
+    console.error(evento);
+    if (nuevo === trabajador) avisarFalloCarga();
+  });
+  trabajador = nuevo;
+}
 
-    visit_AsyncFunctionDef = visit_FunctionDef
-    visit_Lambda = visit_FunctionDef
+// Para el programa en marcha y carga un Python nuevo
+function reiniciarPython() {
+  trabajador.terminate();
+  estado.textContent = "Reiniciando Python…";
+  arrancarPython();
+}
 
-    def visit_Call(self, nodo):
-        self.generic_visit(nodo)
-        if isinstance(nodo.func, ast.Name) and nodo.func.id == "input":
-            nodo.func = ast.copy_location(
-                ast.Name(id="__entrada__", ctx=ast.Load()), nodo.func
-            )
-            return ast.copy_location(ast.Await(value=nodo), nodo)
-        return nodo
+function avisarFalloCarga() {
+  estado.textContent =
+    "No se ha podido cargar Python. Revisa tu conexión a internet y recarga la página.";
+}
 
-
-async def ejecutar(fuente, espacio, pedir_texto):
-    async def __entrada__(mensaje=""):
-        sys.stdout.flush()
-        return str(await pedir_texto(str(mensaje)))
-
-    espacio["__entrada__"] = __entrada__
-    arbol = ast.parse(fuente, "<exec>")
-    arbol = ast.fix_missing_locations(_EsperarEntrada().visit(arbol))
-    codigo = compile(arbol, "<exec>", "exec", flags=ast.PyCF_ALLOW_TOP_LEVEL_AWAIT)
-    resultado = eval(codigo, espacio)
-    if resultado is not None:
-        await resultado
-`;
-
-let pyodide = null;
-let ejecutarPython = null;
-
-async function prepararPython() {
-  try {
-    pyodide = await loadPyodide();
-
-    // Todo lo que Python "imprima" aparece en el recuadro de resultado
-    const decodificador = new TextDecoder();
-    const recoger = {
-      write: (bytes) => {
-        escribirSalida(decodificador.decode(bytes, { stream: true }));
-        return bytes.length;
-      },
-    };
-    pyodide.setStdout(recoger);
-    pyodide.setStderr(recoger);
-    // Nunca abrir ventanas emergentes para pedir datos
-    pyodide.setStdin({ error: true });
-
-    pyodide.FS.writeFile("/home/pyodide/paso_cero.py", AYUDANTE_PYTHON);
-    ejecutarPython = pyodide.pyimport("paso_cero").ejecutar;
-
-    botonComprobar.disabled = false;
-    estado.textContent = "Python está listo. Escribe tu código y pulsa «Comprobar».";
-  } catch (fallo) {
-    console.error(fallo);
-    estado.textContent =
-      "No se ha podido cargar Python. Revisa tu conexión a internet y recarga la página.";
+function recibirMensaje(mensaje) {
+  switch (mensaje.tipo) {
+    case "listo":
+      pythonListo = true;
+      botonComprobar.disabled = ejecutando;
+      if (!ejecutando) {
+        estado.textContent = "Python está listo. Escribe tu código y pulsa «Comprobar».";
+      }
+      break;
+    case "fallo-carga":
+      avisarFalloCarga();
+      break;
+    case "salida":
+      escribirSalida(mensaje.texto);
+      break;
+    case "pedir":
+      dejarDeVigilar();
+      pedirTexto(mensaje.mensaje);
+      break;
+    case "fin":
+      terminarEjecucion({
+        error: mensaje.error,
+        motivo: mensaje.demasiadaSalida ? "demasiada-salida" : null,
+      });
+      break;
   }
 }
 
-prepararPython();
+arrancarPython();
 
 // --- 3. Ejecutar el código ---
 let textoSalida = "";
 let ejecutando = false;
-let cancelado = false;
-let entradaPendiente = null;
+let esperandoEntrada = false;
+let finEjecucion = null;
+let temporizador = null;
 
 botonComprobar.addEventListener("click", comprobar);
 
 async function comprobar() {
-  if (!ejecutarPython || ejecutando) return;
+  if (!pythonListo || ejecutando) return;
 
   ejecutando = true;
-  cancelado = false;
   botonComprobar.disabled = true;
   estado.textContent = "Ejecutando…";
   ocultarTodo();
@@ -158,33 +151,45 @@ async function comprobar() {
   salida.classList.remove("salida-vacia");
 
   const codigo = editor.getValue();
-  // Cada ejecución empieza "limpia", sin variables de la vez anterior
-  const espacio = pyodide.globals.get("dict")();
-  let fallo = null;
+  const resultado = await new Promise((resolver) => {
+    finEjecucion = resolver;
+    trabajador.postMessage({ tipo: "ejecutar", codigo });
+    vigilar();
+  });
 
-  try {
-    await ejecutarPython(codigo, espacio, pedirTexto);
-  } catch (error) {
-    fallo = error;
-  } finally {
-    vaciarSalidas();
-    espacio.destroy();
-    formEntrada.hidden = true;
-    entradaPendiente = null;
-    ejecutando = false;
-    botonComprobar.disabled = false;
-    estado.textContent = "";
-  }
+  ejecutando = false;
+  esperandoEntrada = false;
+  formEntrada.hidden = true;
+  botonComprobar.disabled = !pythonListo;
+  if (pythonListo) estado.textContent = "";
 
-  if (cancelado) {
+  if (resultado.motivo === "cancelado") {
     ocultarTodo();
     return;
   }
 
-  if (fallo) {
-    // Si el programa llegó a mostrar algo antes del error, se queda visible
-    if (textoSalida.trim() === "") cajaResultado.hidden = true;
-    mostrarError(fallo);
+  if (textoSalida.trim() === "") cajaResultado.hidden = true;
+
+  if (resultado.motivo === "demasiado-tiempo") {
+    mostrarAviso(
+      `Tu programa llevaba más de ${LIMITE_SEGUNDOS} segundos sin terminar y lo hemos parado. ` +
+        "Seguramente hay un bucle infinito: un while que nunca acaba. " +
+        "Comprueba que dentro del while cambia algo que haga que termine (por ejemplo, un input())."
+    );
+    return;
+  }
+
+  if (resultado.motivo === "demasiada-salida") {
+    mostrarAviso(
+      "Tu programa ha escrito muchísimas líneas y lo hemos parado. " +
+        "Seguramente hay un bucle infinito: un while que nunca acaba. " +
+        "Comprueba que dentro del while cambia algo que haga que termine (por ejemplo, un input())."
+    );
+    return;
+  }
+
+  if (resultado.error) {
+    mostrarError(resultado.error, codigo);
     return;
   }
 
@@ -202,30 +207,40 @@ async function comprobar() {
   }
 }
 
+function terminarEjecucion(resultado) {
+  dejarDeVigilar();
+  const resolver = finEjecucion;
+  finEjecucion = null;
+  if (resolver) resolver(resultado);
+}
+
+// Vigilancia de bucles infinitos
+function vigilar() {
+  dejarDeVigilar();
+  temporizador = setTimeout(() => {
+    reiniciarPython();
+    terminarEjecucion({ motivo: "demasiado-tiempo" });
+  }, LIMITE_SEGUNDOS * 1000);
+}
+
+function dejarDeVigilar() {
+  clearTimeout(temporizador);
+}
+
 function escribirSalida(texto) {
   textoSalida += texto;
   salida.textContent = textoSalida;
   cajaResultado.hidden = false;
 }
 
-function vaciarSalidas() {
-  try {
-    pyodide.runPython("import sys; sys.stdout.flush(); sys.stderr.flush()");
-  } catch {
-    // Nada que vaciar
-  }
-}
-
 // input(): muestra la pregunta y espera a que la persona escriba
 function pedirTexto(mensaje) {
   escribirSalida(mensaje);
+  esperandoEntrada = true;
   campoEntrada.value = "";
   formEntrada.hidden = false;
   campoEntrada.focus();
   estado.textContent = "Tu programa está esperando: escribe la respuesta y pulsa «Enviar».";
-  return new Promise((resolver, rechazar) => {
-    entradaPendiente = { resolver, rechazar };
-  });
 }
 
 formEntrada.addEventListener("submit", (evento) => {
@@ -241,21 +256,22 @@ campoEntrada.addEventListener("keydown", (evento) => {
 });
 
 function enviarEntrada() {
-  if (!entradaPendiente) return;
+  if (!esperandoEntrada) return;
   const valor = campoEntrada.value;
-  const { resolver } = entradaPendiente;
-  entradaPendiente = null;
+  esperandoEntrada = false;
   formEntrada.hidden = true;
   // Como en una terminal: lo escrito aparece junto a la pregunta
   escribirSalida(valor + "\n");
   estado.textContent = "Ejecutando…";
-  resolver(valor);
+  trabajador.postMessage({ tipo: "respuesta", valor });
+  vigilar();
 }
 
+// «Volver a empezar» con un programa en marcha: lo paramos
 function cancelarEjecucion() {
   if (!ejecutando) return;
-  cancelado = true;
-  if (entradaPendiente) entradaPendiente.rechazar(new Error("Ejecución cancelada"));
+  reiniciarPython();
+  terminarEjecucion({ motivo: "cancelado" });
 }
 
 function ocultarTodo() {
@@ -267,19 +283,32 @@ function ocultarTodo() {
 }
 
 // --- 4. Errores en castellano ---
-function mostrarError(fallo) {
-  const textoOriginal = String(fallo.message || fallo);
+function mostrarError(textoOriginal, codigo) {
   const { tipo, detalle, linea } = analizarError(textoOriginal);
+  const textoLinea = linea ? codigo.split("\n")[linea - 1] || "" : "";
 
-  // Primero, los mensajes propios de esta lección
+  // Primero, los mensajes propios de esta lección. Cada uno puede
+  // fijarse en el tipo de error, en su detalle y en la línea que falla.
   const propio = (LECCION.errores || []).find(
-    (e) => e.tipo === tipo && e.patron.test(detalle)
+    (e) =>
+      e.tipo === tipo &&
+      (!e.patron || e.patron.test(detalle)) &&
+      (!e.linea || e.linea.test(textoLinea))
   );
   errorMensaje.textContent = propio ? propio.mensaje : traducirError(tipo, detalle);
 
   errorLinea.textContent = linea ? `Mira la línea ${linea}.` : "";
   errorLinea.hidden = !linea;
   errorTecnico.textContent = limpiarTraza(textoOriginal);
+  detallesError.hidden = false;
+  cajaError.hidden = false;
+}
+
+// Aviso naranja sin mensaje técnico (por ejemplo, un bucle infinito)
+function mostrarAviso(mensaje) {
+  errorMensaje.textContent = mensaje;
+  errorLinea.hidden = true;
+  detallesError.hidden = true;
   cajaError.hidden = false;
 }
 

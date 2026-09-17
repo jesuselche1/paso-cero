@@ -17,12 +17,16 @@ paso-cero/
 ├── index.html        Página de inicio con el mapa de proyectos
 ├── leccion-1.html    Proyecto 1: Tu primer programa
 ├── leccion-2.html    Proyecto 2: Gastos compartidos
+├── leccion-3.html    Proyecto 3: Adivina el número
 ├── css/estilos.css   Estilos compartidos (pensados primero para móvil)
 └── js/
     ├── progreso.js   Lista de proyectos y progreso guardado en el navegador
     ├── mapa.js       Dibuja el mapa de la página de inicio
-    └── leccion.js    Editor, ejecución de Python, input() dentro de la página,
-                      errores en castellano y pantalla de proyecto terminado
+    ├── leccion.js    Editor, input() dentro de la página, errores en
+    │                 castellano y pantalla de proyecto terminado
+    └── python-worker.js
+                      Ejecuta Python (Pyodide) en segundo plano. Si un programa
+                      se atasca en un bucle infinito, se para sin congelar la página
 ```
 
 ## Añadir un proyecto nuevo

@@ -23,7 +23,13 @@ const PROYECTOS = [
   {
     numero: 3,
     titulo: "Adivina el número",
-    descripcion: "Crea un juego para adivinar un número secreto.",
+    descripcion: "Crea tu primer juego: adivina el número secreto.",
+    url: "leccion-3.html",
+  },
+  {
+    numero: 4,
+    titulo: "Lista de la compra",
+    descripcion: "Guarda varios productos en una lista.",
     url: null,
   },
 ];
