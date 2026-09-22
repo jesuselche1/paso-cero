@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Gastos compartidos — Paso Cero</title>
-  <meta name="description" content="Proyecto 2 de Python: crea un programa que reparte la cuenta de una cena entre amigos.">
+  <title>Lección — Paso Cero</title>
 
   <!-- CodeMirror: el editor de código (estilos) -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.css">
@@ -19,44 +18,39 @@
     </div>
   </header>
 
+  <!-- Esta página vale para todas las lecciones. El contenido de cada una
+       está en js/lecciones/leccion-N.js y lo coloca aquí js/plantilla.js -->
   <main class="contenedor leccion">
 
-    <span class="etiqueta">Proyecto 2 de 9</span>
-    <h1>Gastos compartidos</h1>
+    <span class="etiqueta" id="etiqueta-proyecto"></span>
+    <h1 id="titulo-proyecto"></h1>
 
-    <!-- PARTE 1 -->
     <section class="parte">
       <h2><span class="parte-numero">1</span> El reto</h2>
-      <p>Salís a cenar 4 amigos y la cuenta es de 86 €. ¿Cuánto paga cada uno? Vamos a crear un programa que lo calcule por ti.</p>
+      <div id="parte-reto"></div>
     </section>
 
-    <!-- PARTE 2 -->
     <section class="parte">
       <h2><span class="parte-numero">2</span> Lo que necesitas saber</h2>
-      <ul class="lista-conceptos">
-        <li><strong>Números:</strong> Python los usa sin comillas. <code>86</code> es un número; <code>"86"</code> es un texto.</li>
-        <li><strong>Operaciones:</strong> <code>+</code> suma, <code>-</code> resta, <code>*</code> multiplica, <code>/</code> divide.</li>
-        <li><strong><code>input()</code> siempre te da texto</strong>, aunque escribas un número. Es como si te lo dieran escrito en un papel: primero hay que leerlo como cantidad. Para eso se usa <code>float()</code>.</li>
-        <li><strong><code>round(numero, 2)</code></strong> deja el resultado con dos decimales, como en los euros.</li>
-      </ul>
+      <div id="parte-saber"></div>
     </section>
 
-    <!-- PARTE 3 -->
     <section class="parte">
       <h2><span class="parte-numero">3</span> Constrúyelo tú</h2>
 
       <div class="reto">
         <strong>Tu reto</strong>
-        Este programa tiene un fallo. Pulsa «Comprobar» y arréglalo.
+        <span id="texto-reto"></span>
       </div>
 
-      <!-- ===== Zona de código (igual en todas las lecciones) ===== -->
+      <!-- ===== Zona de código: la misma para todas las lecciones ===== -->
       <div class="editor">
         <textarea id="codigo" aria-label="Editor de código Python"></textarea>
       </div>
 
       <div class="acciones">
         <button id="boton-comprobar" class="boton" type="button" disabled>Comprobar</button>
+        <button id="boton-ejecutar" class="boton boton-secundario" type="button" disabled>Ejecutar</button>
         <button id="boton-pista" class="boton boton-secundario" type="button" hidden>Pedir pista</button>
         <button id="boton-reiniciar" class="boton boton-secundario" type="button">Volver a empezar</button>
       </div>
@@ -71,6 +65,7 @@
       <!-- Resultado del programa y caja para input() -->
       <section class="resultado" id="resultado" hidden>
         <h3>Resultado</h3>
+        <p class="info-prueba" id="info-prueba" hidden></p>
         <pre id="salida" class="salida" aria-live="polite"></pre>
         <form class="entrada" id="entrada" hidden>
           <label class="solo-lectores" for="entrada-campo">Tu respuesta</label>
@@ -79,18 +74,25 @@
         </form>
       </section>
 
-      <!-- Recuadro naranja para los errores -->
+      <!-- Recuadro naranja: errores y resultados que no cuadran -->
       <section class="error" id="error" role="alert" hidden>
-        <h3>Vaya, algo no ha funcionado</h3>
+        <h3 id="error-titulo">Vaya, algo no ha funcionado</h3>
         <p id="error-mensaje"></p>
         <p id="error-linea" class="error-linea"></p>
+        <div class="comparacion" id="comparacion" hidden>
+          <p class="pie-comparacion">Esperaba ver:</p>
+          <pre id="esperado"></pre>
+          <p class="pie-comparacion">Y ha salido:</p>
+          <pre id="obtenido"></pre>
+          <p id="consejo">Fíjate en la diferencia.</p>
+        </div>
         <details>
           <summary>Ver el mensaje original de Python</summary>
           <pre id="error-tecnico"></pre>
         </details>
       </section>
 
-      <!-- Aviso cuando funciona pero no cumple el reto -->
+      <!-- Aviso cuando funciona pero le falta algo que pide el reto -->
       <p class="nota" id="nota" hidden></p>
 
       <!-- Mensaje cuando se supera el reto -->
@@ -98,23 +100,14 @@
       <!-- ===== Fin de la zona de código ===== -->
     </section>
 
-    <!-- PARTE 4 -->
     <section class="parte">
       <h2><span class="parte-numero">4</span> Constrúyelo con IA</h2>
-      <div class="aviso">
-        <p><strong>¿Te has atascado?</strong> Puedes preguntar a una IA, pero pídele que te explique, no que te lo haga.</p>
-        <p>Ejemplo de buena pregunta:</p>
-        <blockquote>Estoy aprendiendo Python. Mi programa da error al dividir dos datos que pido con input(). Explícame por qué sin darme la solución completa.</blockquote>
-      </div>
+      <div id="parte-ia"></div>
     </section>
 
-    <!-- PARTE 5 -->
     <section class="parte">
       <h2><span class="parte-numero">5</span> Mejóralo <small>(opcional)</small></h2>
-      <div class="reto">
-        <strong>Reto extra</strong>
-        Pregunta también qué porcentaje de propina queréis dejar y súmalo al total antes de dividir.
-      </div>
+      <div id="parte-mejoralo"></div>
     </section>
 
   </main>
@@ -125,38 +118,12 @@
     </div>
   </footer>
 
-  <!-- Datos de esta lección -->
-  <script>
-    const LECCION = {
-      numero: 2,
-      titulo: "Gastos compartidos",
-      codigoInicial: [
-        'total = input("¿Cuánto ha costado la cena? ")',
-        'personas = input("¿Cuántos sois? ")',
-        'print("Cada uno paga:", total / personas)',
-      ].join("\n"),
-      pista: "Lo que llega de input() es texto. ¿Qué función convierte un texto en número?",
-      aprendido: ["Números", "float()", "Operaciones", "round()"],
-      // Mensajes de error propios de esta lección
-      errores: [
-        {
-          tipo: "TypeError",
-          patron: /unsupported operand type\(s\) for \/.*'str'/,
-          mensaje: "No se pueden dividir textos. Convierte lo que escribe la persona en número con float().",
-        },
-      ],
-      // Correcto si se ejecuta sin errores y usa float()
-      esCorrecto: ({ codigo }) => /\bfloat\s*\(/.test(quitarComentarios(codigo)),
-      notaSiNoCorrecto:
-        "Tu programa funciona, pero el reto pide usar float() para convertir en número lo que escribe la persona.",
-    };
-  </script>
-
   <!-- CodeMirror (el editor) y su modo para colorear Python -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/mode/python/python.min.js"></script>
   <!-- Nuestro código -->
+  <script src="js/ajustes.js"></script>
   <script src="js/progreso.js"></script>
-  <script src="js/leccion.js"></script>
+  <script src="js/plantilla.js"></script>
 </body>
 </html>

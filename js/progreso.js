@@ -7,24 +7,25 @@
 const TOTAL_PROYECTOS = 9;
 
 // Proyectos que ya tienen nombre. Los que no tienen «url» aún no existen.
+// La «url» apunta a la plantilla: leccion.html?p=NÚMERO
 const PROYECTOS = [
   {
     numero: 1,
-    titulo: "Tu primer programa",
-    descripcion: "Usa print() para mostrar mensajes.",
-    url: "leccion-1.html",
+    titulo: "Tu primer saludo",
+    descripcion: "Haz que el ordenador te pregunte el nombre y te salude.",
+    url: "leccion.html?p=1",
   },
   {
     numero: 2,
     titulo: "Gastos compartidos",
     descripcion: "Calcula cuánto paga cada uno en una cena.",
-    url: "leccion-2.html",
+    url: "leccion.html?p=2",
   },
   {
     numero: 3,
     titulo: "Adivina el número",
     descripcion: "Crea tu primer juego: adivina el número secreto.",
-    url: "leccion-3.html",
+    url: "leccion.html?p=3",
   },
   {
     numero: 4,

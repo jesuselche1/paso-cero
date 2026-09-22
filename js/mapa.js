@@ -64,14 +64,20 @@ function textoEstado(estado, proyecto) {
 
 // El botón grande lleva al primer proyecto pendiente que ya exista
 function actualizarBotonEmpezar() {
+  const primero = datosProyecto(1);
   const pendiente = PROYECTOS.find(
     (p) => p.url && estaDesbloqueado(p.numero) && !estaCompletado(p.numero)
   );
+
   if (!pendiente) {
+    // Todo lo que hay está hecho: el botón sirve para repasar
+    botonEmpezar.href = primero.url;
     if (leerCompletados().length) botonEmpezar.textContent = "Repasar el primer proyecto";
     return;
   }
-  if (pendiente.numero === 1) return;
+
   botonEmpezar.href = pendiente.url;
-  botonEmpezar.textContent = `Continuar: Proyecto ${pendiente.numero}`;
+  if (pendiente.numero > 1) {
+    botonEmpezar.textContent = `Continuar: Proyecto ${pendiente.numero}`;
+  }
 }

@@ -5,8 +5,9 @@
 //
 // 1. Crea el editor (CodeMirror)
 // 2. Carga Python (Pyodide) en segundo plano, en un Web Worker
-// 3. Al pulsar «Comprobar», ejecuta el código y muestra el resultado
-//    (input() pide los datos en una caja dentro de la página)
+// 3. «Ejecutar» prueba el programa respondiendo tú; «Comprobar» lo ejecuta
+//    con las respuestas de prueba de la lección y compara el resultado
+//    con el esperado
 // 4. Si hay un error, lo explica en castellano sencillo
 // 5. Si el reto está superado, muestra la pantalla de proyecto terminado
 // ==========================================================
@@ -14,6 +15,7 @@
 // --- Elementos de la página ---
 const porId = (id) => document.getElementById(id);
 const botonComprobar = porId("boton-comprobar");
+const botonEjecutar = porId("boton-ejecutar");
 const botonReiniciar = porId("boton-reiniciar");
 const botonPista = porId("boton-pista");
 const cajaPista = porId("pista");
@@ -27,6 +29,12 @@ const errorMensaje = porId("error-mensaje");
 const errorLinea = porId("error-linea");
 const errorTecnico = porId("error-tecnico");
 const detallesError = cajaError.querySelector("details");
+const tituloError = porId("error-titulo");
+const comparacion = porId("comparacion");
+const textoEsperado = porId("esperado");
+const textoObtenido = porId("obtenido");
+const consejo = porId("consejo");
+const infoPrueba = porId("info-prueba");
 const nota = porId("nota");
 const acierto = porId("acierto");
 
@@ -66,9 +74,7 @@ if (botonPista && LECCION.pista) {
 // Python funciona dentro de un «trabajador» (js/python-worker.js), así
 // que aunque el programa se quede atascado, la página sigue respondiendo.
 
-// Si un programa pasa este tiempo sin terminar (sin contar lo que espera
-// a que la persona escriba), lo paramos: seguramente es un bucle infinito.
-const LIMITE_SEGUNDOS = 5;
+// Los límites contra los bucles infinitos están en js/ajustes.js
 
 let trabajador = null;
 let pythonListo = false;
@@ -76,6 +82,7 @@ let pythonListo = false;
 function arrancarPython() {
   pythonListo = false;
   botonComprobar.disabled = true;
+  if (botonEjecutar) botonEjecutar.disabled = true;
   const nuevo = new Worker("js/python-worker.js");
   // Solo atendemos al trabajador actual, no a uno que ya hemos parado
   nuevo.addEventListener("message", ({ data }) => {
@@ -105,6 +112,7 @@ function recibirMensaje(mensaje) {
     case "listo":
       pythonListo = true;
       botonComprobar.disabled = ejecutando;
+      if (botonEjecutar) botonEjecutar.disabled = ejecutando;
       if (!ejecutando) {
         estado.textContent = "Python está listo. Escribe tu código y pulsa «Comprobar».";
       }
@@ -122,6 +130,7 @@ function recibirMensaje(mensaje) {
     case "fin":
       terminarEjecucion({
         error: mensaje.error,
+        salidaPruebas: mensaje.salidaPruebas || "",
         motivo: mensaje.demasiadaSalida ? "demasiada-salida" : null,
       });
       break;
@@ -130,7 +139,11 @@ function recibirMensaje(mensaje) {
 
 arrancarPython();
 
-// --- 3. Ejecutar el código ---
+// --- 3. Ejecutar y comprobar ---
+// Hay dos formas de ejecutar el programa:
+//   · «Ejecutar»: la persona responde a mano. Sirve para probar y jugar.
+//   · «Comprobar»: se ejecuta una vez por cada prueba de la lección, con
+//     respuestas automáticas, y se compara lo que imprime con lo esperado.
 let textoSalida = "";
 let ejecutando = false;
 let esperandoEntrada = false;
@@ -138,22 +151,26 @@ let finEjecucion = null;
 let temporizador = null;
 
 botonComprobar.addEventListener("click", comprobar);
+if (botonEjecutar) botonEjecutar.addEventListener("click", ejecutarAMano);
 
-async function comprobar() {
-  if (!pythonListo || ejecutando) return;
-
+// Ejecuta el programa una vez. Si le pasas «prueba», las respuestas
+// salen de ahí y no se le pregunta nada a la persona.
+async function ejecutarPrograma(codigo, prueba) {
   ejecutando = true;
   botonComprobar.disabled = true;
-  estado.textContent = "Ejecutando…";
-  ocultarTodo();
+  if (botonEjecutar) botonEjecutar.disabled = true;
   textoSalida = "";
   salida.textContent = "";
   salida.classList.remove("salida-vacia");
 
-  const codigo = editor.getValue();
   const resultado = await new Promise((resolver) => {
     finEjecucion = resolver;
-    trabajador.postMessage({ tipo: "ejecutar", codigo });
+    trabajador.postMessage({
+      tipo: "ejecutar",
+      codigo,
+      entradas: prueba ? prueba.entradas : null,
+      preparacion: prueba ? prueba.preparacion : null,
+    });
     vigilar();
   });
 
@@ -161,50 +178,183 @@ async function comprobar() {
   esperandoEntrada = false;
   formEntrada.hidden = true;
   botonComprobar.disabled = !pythonListo;
+  if (botonEjecutar) botonEjecutar.disabled = !pythonListo;
   if (pythonListo) estado.textContent = "";
+  return resultado;
+}
 
+// Muestra los avisos comunes (parada, error). Devuelve true si hubo problema.
+function hayProblema(resultado, codigo) {
   if (resultado.motivo === "cancelado") {
     ocultarTodo();
-    return;
+    return true;
   }
 
   if (textoSalida.trim() === "") cajaResultado.hidden = true;
 
-  if (resultado.motivo === "demasiado-tiempo") {
+  if (resultado.motivo === "demasiado-tiempo" || resultado.motivo === "demasiada-salida") {
+    const inicio =
+      resultado.motivo === "demasiado-tiempo"
+        ? `Tu programa llevaba más de ${LIMITE_SEGUNDOS} segundos sin terminar y lo hemos parado. `
+        : "Tu programa ha escrito muchísimas líneas y lo hemos parado. ";
     mostrarAviso(
-      `Tu programa llevaba más de ${LIMITE_SEGUNDOS} segundos sin terminar y lo hemos parado. ` +
+      inicio +
         "Seguramente hay un bucle infinito: un while que nunca acaba. " +
         "Comprueba que dentro del while cambia algo que haga que termine (por ejemplo, un input())."
     );
-    return;
-  }
-
-  if (resultado.motivo === "demasiada-salida") {
-    mostrarAviso(
-      "Tu programa ha escrito muchísimas líneas y lo hemos parado. " +
-        "Seguramente hay un bucle infinito: un while que nunca acaba. " +
-        "Comprueba que dentro del while cambia algo que haga que termine (por ejemplo, un input())."
-    );
-    return;
+    return true;
   }
 
   if (resultado.error) {
     mostrarError(resultado.error, codigo);
-    return;
+    return true;
   }
+
+  return false;
+}
+
+// Botón «Ejecutar»: la persona responde a mano y no se juzga el resultado
+async function ejecutarAMano() {
+  if (!pythonListo || ejecutando) return;
+  const codigo = editor.getValue();
+  ocultarTodo();
+  estado.textContent = "Ejecutando…";
+
+  const resultado = await ejecutarPrograma(codigo, null);
+  if (hayProblema(resultado, codigo)) return;
 
   if (textoSalida.trim() === "") {
     cajaResultado.hidden = false;
     salida.textContent = "(Tu programa no ha mostrado nada. ¿Te falta un print()?)";
     salida.classList.add("salida-vacia");
   }
+}
 
-  if (LECCION.esCorrecto({ codigo, salida: textoSalida })) {
-    retoSuperado();
-  } else {
+// Botón «Comprobar»: pasa todas las pruebas de la lección
+async function comprobar() {
+  if (!pythonListo || ejecutando) return;
+  const codigo = editor.getValue();
+  const pruebas = LECCION.pruebas || [];
+  ocultarTodo();
+
+  for (let i = 0; i < pruebas.length; i++) {
+    const prueba = pruebas[i];
+    estado.textContent =
+      pruebas.length > 1 ? `Comprobando… (prueba ${i + 1} de ${pruebas.length})` : "Comprobando…";
+    contarPrueba(i, pruebas.length, prueba);
+
+    const resultado = await ejecutarPrograma(codigo, prueba);
+    if (hayProblema(resultado, codigo)) return;
+
+    if (!coincide(resultado.salidaPruebas, prueba.esperado)) {
+      mostrarComparacion(prueba.esperado, resultado.salidaPruebas, codigo);
+      return;
+    }
+  }
+
+  // Algunas lecciones piden además usar algo concreto (por ejemplo, float)
+  if (LECCION.requisito && !LECCION.requisito(quitarComentarios(codigo))) {
     nota.textContent = LECCION.notaSiNoCorrecto;
     nota.hidden = false;
+    return;
   }
+
+  retoSuperado();
+}
+
+// Dice qué prueba se está ejecutando, encima del resultado
+function contarPrueba(indice, total, prueba) {
+  if (!infoPrueba) return;
+  if (total <= 1 && !(prueba.entradas || []).length) {
+    infoPrueba.hidden = true;
+    return;
+  }
+  const respuestas = (prueba.entradas || []).join(", ");
+  const cual = total > 1 ? `Prueba ${indice + 1} de ${total}` : "Prueba";
+  infoPrueba.textContent = respuestas ? `${cual} · respondiendo: ${respuestas}` : cual;
+  infoPrueba.hidden = false;
+}
+
+// Compara sin tener en cuenta los espacios sobrantes ni las mayúsculas
+function coincide(obtenido, esperado) {
+  return limpiarParaComparar(obtenido) === limpiarParaComparar(esperado);
+}
+
+function limpiarParaComparar(texto) {
+  return String(texto ?? "")
+    .normalize("NFC")
+    .replace(/\r/g, "")
+    .split("\n")
+    .map((linea) => linea.trim())
+    .join("\n")
+    .trim()
+    .toLowerCase();
+}
+
+// El programa funciona, pero no sale lo que pide el reto
+function mostrarComparacion(esperado, obtenido, codigo) {
+  mostrarCaja({
+    titulo: TITULO_CASI,
+    mensaje: "Tu programa funciona, pero no hace lo que pide el reto.",
+    comparacion: {
+      esperado,
+      obtenido: obtenido.trim() === "" ? "(nada)" : obtenido.trim(),
+      consejo: buscarFalloTipico({ esperado, obtenido, codigo }),
+    },
+  });
+}
+
+// --- Fallos típicos ---
+// Cada fallo mira el resultado esperado, el obtenido y el código, y
+// devuelve un consejo o null. Se prueban en orden y gana el primero.
+// Para añadir uno propio de una lección, ponlo en LECCION.fallosTipicos.
+const CONSEJO_GENERAL = "Fíjate en la diferencia.";
+
+const FALLOS_TIPICOS = [
+  // La variable se ha quedado dentro de las comillas
+  ({ esperado, obtenido, codigo }) => {
+    const nombre = nombresDeVariables(codigo).find(
+      (v) => contienePalabra(obtenido, v) && !contienePalabra(esperado, v)
+    );
+    if (!nombre) return null;
+    return (
+      `Ha salido la palabra "${nombre}" en lugar de lo que hay guardado dentro. ` +
+      "Eso pasa cuando la variable se queda dentro de las comillas. " +
+      "Recuerda: con comillas = el texto tal cual; sin comillas = mira qué hay dentro de la caja."
+    );
+  },
+
+  // Solo cambian espacios o signos de puntuación
+  ({ esperado, obtenido }) => {
+    if (soloLetrasYNumeros(esperado) !== soloLetrasYNumeros(obtenido)) return null;
+    return "¡Muy cerca! Solo cambia algún espacio o signo. Compáralas letra a letra.";
+  },
+];
+
+function buscarFalloTipico(datos) {
+  const fallos = [...(LECCION.fallosTipicos || []), ...FALLOS_TIPICOS];
+  for (const fallo of fallos) {
+    const consejo = fallo(datos);
+    if (consejo) return consejo;
+  }
+  return CONSEJO_GENERAL;
+}
+
+// Nombres de las cajitas del código: lo que hay antes de un = (pero no de ==)
+function nombresDeVariables(codigo) {
+  const nombres = [...quitarComentarios(codigo || "").matchAll(/^[ \t]*([A-Za-zÁ-ÿ_]\w*)\s*=(?!=)/gm)];
+  return [...new Set(nombres.map((n) => n[1]))];
+}
+
+function contienePalabra(texto, palabra) {
+  return new RegExp(`(^|[^\\wÁ-ÿ])${palabra}([^\\wÁ-ÿ]|$)`, "i").test(String(texto));
+}
+
+function soloLetrasYNumeros(texto) {
+  return String(texto)
+    .normalize("NFC")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]/gu, "");
 }
 
 function terminarEjecucion(resultado) {
@@ -277,12 +427,39 @@ function cancelarEjecucion() {
 function ocultarTodo() {
   cajaResultado.hidden = true;
   cajaError.hidden = true;
+  comparacion.hidden = true;
   nota.hidden = true;
   acierto.hidden = true;
   formEntrada.hidden = true;
+  if (infoPrueba) infoPrueba.hidden = true;
 }
 
 // --- 4. Errores en castellano ---
+const TITULO_ERROR = "Vaya, algo no ha funcionado";
+const TITULO_CASI = "Casi lo tienes";
+
+// El único sitio que enseña el recuadro naranja. Cada trozo se muestra
+// o se oculta aquí, así no puede quedarse uno visible por descuido.
+function mostrarCaja({ titulo, mensaje, linea = null, tecnico = null, comparacion: datos = null }) {
+  tituloError.textContent = titulo;
+  errorMensaje.textContent = mensaje;
+
+  errorLinea.textContent = linea ? `Mira la línea ${linea}.` : "";
+  errorLinea.hidden = !linea;
+
+  errorTecnico.textContent = tecnico || "";
+  detallesError.hidden = !tecnico;
+
+  if (datos) {
+    textoEsperado.textContent = datos.esperado;
+    textoObtenido.textContent = datos.obtenido;
+    consejo.textContent = datos.consejo;
+  }
+  comparacion.hidden = !datos;
+
+  cajaError.hidden = false;
+}
+
 function mostrarError(textoOriginal, codigo) {
   const { tipo, detalle, linea } = analizarError(textoOriginal);
   const textoLinea = linea ? codigo.split("\n")[linea - 1] || "" : "";
@@ -295,21 +472,17 @@ function mostrarError(textoOriginal, codigo) {
       (!e.patron || e.patron.test(detalle)) &&
       (!e.linea || e.linea.test(textoLinea))
   );
-  errorMensaje.textContent = propio ? propio.mensaje : traducirError(tipo, detalle);
-
-  errorLinea.textContent = linea ? `Mira la línea ${linea}.` : "";
-  errorLinea.hidden = !linea;
-  errorTecnico.textContent = limpiarTraza(textoOriginal);
-  detallesError.hidden = false;
-  cajaError.hidden = false;
+  mostrarCaja({
+    titulo: TITULO_ERROR,
+    mensaje: propio ? propio.mensaje : traducirError(tipo, detalle),
+    linea,
+    tecnico: limpiarTraza(textoOriginal),
+  });
 }
 
 // Aviso naranja sin mensaje técnico (por ejemplo, un bucle infinito)
 function mostrarAviso(mensaje) {
-  errorMensaje.textContent = mensaje;
-  errorLinea.hidden = true;
-  detallesError.hidden = true;
-  cajaError.hidden = false;
+  mostrarCaja({ titulo: TITULO_ERROR, mensaje });
 }
 
 // Saca el tipo de error, su detalle y la línea donde ocurrió

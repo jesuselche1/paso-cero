@@ -419,6 +419,36 @@ code {
   color: var(--verde-oscuro);
 }
 
+/* Qué prueba se está ejecutando */
+.info-prueba {
+  font-size: 0.85rem;
+  color: var(--tinta-suave);
+  margin: 0 0 6px;
+}
+
+/* Comparación: lo que se esperaba y lo que ha salido */
+.comparacion pre {
+  background: #fff;
+  border: 1px solid var(--naranja-borde);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 0 0 8px;
+  font-family: var(--letra-codigo);
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.pie-comparacion {
+  margin: 0 0 4px !important;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.comparacion p:last-child {
+  margin: 0 !important;
+}
+
 /* Aviso cuando el programa funciona pero no cumple el reto */
 .nota {
   background: var(--crema-oscuro);
@@ -465,6 +495,74 @@ code {
 
 .lista-conceptos li {
   margin-bottom: 10px;
+}
+
+/* Explicaciones de los conceptos */
+.explicacion {
+  border-top: 1px solid var(--borde);
+  padding-top: 20px;
+  margin-top: 24px;
+}
+
+.explicacion h3 {
+  font-size: 1.05rem;
+  margin: 0 0 8px;
+}
+
+.explicacion p {
+  margin: 0 0 10px;
+}
+
+/* Ejemplo: el código y lo que sale por pantalla */
+.ejemplo {
+  margin: 14px 0 16px;
+}
+
+.ejemplo .codigo {
+  background: var(--crema-oscuro);
+  border-radius: var(--radio);
+  padding: 12px 14px;
+  margin: 0;
+  overflow-x: auto;
+  font-size: 0.95rem;
+}
+
+.ejemplo .codigo code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+
+.pie-ejemplo {
+  margin: 10px 0 4px !important;
+  font-size: 0.9rem;
+  color: var(--tinta-suave);
+}
+
+.ejemplo .pantalla {
+  background: var(--tinta);
+  color: #f5f1e6;
+  font-family: var(--letra-codigo);
+  font-size: 0.95rem;
+  padding: 12px 14px;
+  border-radius: var(--radio);
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Aviso del fallo típico */
+.fallo {
+  background: var(--naranja-fondo);
+  border-left: 4px solid var(--naranja-borde);
+  color: var(--naranja-texto);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 12px 0 0 !important;
+}
+
+.fallo code {
+  background: #fff;
 }
 
 /* Pista */
